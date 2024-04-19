@@ -3,5 +3,8 @@
         "**/.sublime": true,
         "**/.compile_scripts": true,
         "**/.config": true
+    },
+    "files.associations": {
+        "hashcodes.h": "c"
     }
 }

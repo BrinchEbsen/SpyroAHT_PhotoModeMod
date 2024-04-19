@@ -11,8 +11,10 @@
 # Built Visual Studio Code Extensions
 *.vsix
 
-# Zip files
+# Output files
 *.zip
+*.iso
+*.dol
 
 # Patch files
 *.xdelta
