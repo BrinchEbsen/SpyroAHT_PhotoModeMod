@@ -18,7 +18,7 @@ int GUI_PanelItem_Hook(int* panelItem, int* wnd);
 int GUI_ScreenItem_Hook(int* screenItem, int* wnd);
 void XItem_DoItemUpdate_Hook(int* self);
 
-#define NUM_MODES 5
+#define NUM_MODES 6
 
 enum
 {
@@ -26,6 +26,7 @@ enum
     TINT,
     BRIGHT,
     FOG,
+    POSITION,
     MISC
 };
 
@@ -69,6 +70,31 @@ void saveCamHandlerVecs() {
     savedCamHandlerLook.y = camLook->y;
     savedCamHandlerLook.z = camLook->z;
     savedCamHandlerLook.w = camLook->w;
+}
+
+void savePlayerTransform() {
+    EXVector* pos = getPlayerPosition();
+    if (pos == NULL) { return; }
+    EXVector* rot = getPlayerRotation();
+    if (rot == NULL) { return; }
+
+    savedPlayerPos.x = pos->x;
+    savedPlayerPos.y = pos->y;
+    savedPlayerPos.z = pos->z;
+    savedPlayerPos.w = pos->w;
+    currentPlayerPos.x = pos->x;
+    currentPlayerPos.y = pos->y;
+    currentPlayerPos.z = pos->z;
+    currentPlayerPos.w = pos->w;
+
+    savedPlayerRot.x = rot->x;
+    savedPlayerRot.y = rot->y;
+    savedPlayerRot.z = rot->z;
+    savedPlayerRot.w = rot->w;
+    currentPlayerRot.x = rot->x;
+    currentPlayerRot.y = rot->y;
+    currentPlayerRot.z = rot->z;
+    currentPlayerRot.w = rot->w;
 }
 
 void restoreCamHandlerVecs() {
@@ -124,6 +150,16 @@ void resetValues() {
 
     engineFrameRate = 60;
     GC_Shadow_Precision_Scale = 2.0;
+
+    currentPlayerPos.x = savedPlayerPos.x;
+    currentPlayerPos.y = savedPlayerPos.y;
+    currentPlayerPos.z = savedPlayerPos.z;
+    currentPlayerPos.w = savedPlayerPos.w;
+    currentPlayerRot.x = savedPlayerRot.x;
+    currentPlayerRot.y = savedPlayerRot.y;
+    currentPlayerRot.z = savedPlayerRot.z;
+    currentPlayerRot.w = savedPlayerRot.w;
+    updateAnimatorMatrix();
 }
 
 bool checkZDoublePress() {
@@ -230,6 +266,7 @@ void MainUpdate() {
             GameSetPauseOn(&gGameLoop, 0);
             saveCamHandlerVecs();
             updatePauseState();
+            savePlayerTransform();
         }
     }
 
@@ -270,6 +307,9 @@ void MainUpdate() {
                 break;
             case FOG:
                 doFogControls();
+                break;
+            case POSITION:
+                doPositionControls();
                 break;
             case MISC:
                 doMiscControls();
@@ -340,6 +380,26 @@ void DrawUpdate() {
 
                 textPrintF(20, 130, TopLeft, nearCol, 1.0, "Near: %.3f", GC_Fog_Near_Scale);
                 textPrintF(20, 145, TopLeft, farCol, 1.0, "Far:  %.3f", GC_Fog_Far_Scale);
+
+                break;
+            case POSITION:
+                textPrint("<Player Position>", 0, 20, 100, TopLeft, &COLOR_TEXT, 1.2);
+
+                
+
+                XRGBA* PosXCol = positionOption == 0 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                XRGBA* PosYCol = positionOption == 1 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                XRGBA* PosZCol = positionOption == 2 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                XRGBA* RotXCol = positionOption == 3 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                XRGBA* RotYCol = positionOption == 4 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                XRGBA* RotZCol = positionOption == 5 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+
+                textPrint("x", 0, 20, 130, TopLeft, PosXCol, 1.0);
+                textPrint("y", 0, 20, 145, TopLeft, PosYCol, 1.0);
+                textPrint("z", 0, 20, 160, TopLeft, PosZCol, 1.0);
+                textPrint("x", 0, 20, 175, TopLeft, RotXCol, 1.0);
+                textPrint("y", 0, 20, 190, TopLeft, RotYCol, 1.0);
+                textPrint("z", 0, 20, 205, TopLeft, RotZCol, 1.0);
 
                 break;
             case MISC:

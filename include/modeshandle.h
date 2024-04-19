@@ -4,10 +4,11 @@
 #include <symbols.h>
 #include <rotation.h>
 
-extern int colorOption;
-extern int fogOption;
-extern int brightOption;
-extern int miscOption;
+extern s8 colorOption;
+extern s8 fogOption;
+extern s8 brightOption;
+extern s8 positionOption;
+extern s8 miscOption;
 
 extern bool doFrameAdvance;
 
@@ -20,6 +21,17 @@ extern EXVector savedCamHandlerLook;
 
 bool headTrackEnabled();
 void setHeadTracking(bool enable);
+
+EXVector* getPlayerPosition();
+EXVector* getPlayerRotation();
+
+extern EXVector savedPlayerRot;
+extern EXVector savedPlayerPos;
+
+extern EXVector currentPlayerRot;
+extern EXVector currentPlayerPos;
+
+void updateAnimatorMatrix();
 
 //Get the player's animator
 int* getPlayerAnimator();
@@ -42,6 +54,9 @@ void doBrightnessControls();
 
 //"Fog" Mode
 void doFogControls();
+
+//"Position" Mode
+void doPositionControls();
 
 //"Misc" Mode
 void doMiscControls();

@@ -15,6 +15,7 @@
 *.zip
 *.iso
 *.dol
+*.o
 
 # Patch files
 *.xdelta

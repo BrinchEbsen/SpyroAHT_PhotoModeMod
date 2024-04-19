@@ -4,10 +4,11 @@
 #include <hashcodes.h>
 
 //Positions of menu selection
-int colorOption = 0;
-int fogOption = 0;
-int brightOption = 0;
-int miscOption = 0;
+s8 colorOption = 0;
+s8 fogOption = 0;
+s8 brightOption = 0;
+s8 positionOption = 0;
+s8 miscOption = 0;
 
 //Whether to advance the player's animation this frame
 bool doFrameAdvance = false;
@@ -19,6 +20,12 @@ int* customCam = NULL;
 
 EXVector savedCamHandlerPos  = {0};
 EXVector savedCamHandlerLook = {0};
+
+EXVector savedPlayerRot = {0};
+EXVector savedPlayerPos = {0};
+
+EXVector currentPlayerRot = {0};
+EXVector currentPlayerPos = {0};
 
 void updateLightingVector() {
     if (doLightingUpdate) {
@@ -53,6 +60,31 @@ int* getPlayerAnimator() {
     if (gpPlayerItem == NULL) { return 0; }
 
     return *(gpPlayerItem + (0x144/4));
+}
+
+void updateAnimatorMatrix() {
+    if (gpPlayerItem == NULL) { return; }
+
+    int* animator = getPlayerAnimator();
+
+    mat44* mat = (mat44*) (animator + (0x90/4));
+
+    mat_44_set_rotate(mat, &currentPlayerRot, 4);
+    mat->row3.x = currentPlayerPos.x;
+    mat->row3.y = currentPlayerPos.y;
+    mat->row3.z = currentPlayerPos.z;
+}
+
+EXVector* getPlayerPosition() {
+    if (gpPlayerItem == NULL) { return NULL; }
+
+    return (EXVector*) (gpPlayerItem + (0xD0/4));
+}
+
+EXVector* getPlayerRotation() {
+    if (gpPlayerItem == NULL) { return NULL; }
+
+    return (EXVector*) (gpPlayerItem + (0xE0/4));
 }
 
 uint getCurrentAnimMode() {
@@ -118,10 +150,10 @@ void doCamControls() {
         moveSensitivity = 0.03;
     }
 
-    float stickY = Pads_Analog->LStick_Y;
-    float stickX = Pads_Analog->LStick_X;
-    float trigL = Pads_Analog->LTrigger;
-    float trigR = Pads_Analog->RTrigger;
+    float stickY = Pads_Analog[g_PadNum].LStick_Y;
+    float stickX = Pads_Analog[g_PadNum].LStick_X;
+    float trigL = Pads_Analog[g_PadNum].LTrigger;
+    float trigR = Pads_Analog[g_PadNum].RTrigger;
 
     //Camera point vector
     float camPointX = CamMatrix.row0.x;
@@ -156,8 +188,8 @@ void doCamControls() {
     gCommonCamera.Target.y += moveY;
 
     //Rotate camera
-    float angHor = Pads_Analog->RStick_X * lookSensitivity;
-    float angVer = Pads_Analog->RStick_Y * lookSensitivity;
+    float angHor = Pads_Analog[g_PadNum].RStick_X * lookSensitivity;
+    float angVer = Pads_Analog[g_PadNum].RStick_Y * lookSensitivity;
 
     //mat44 rot = EulerToMatrix(-angVer, -angHor, 0);
 
@@ -198,9 +230,9 @@ void doColorControls() {
 
     switch(colorOption) {
         case 0:
-            Display_TintRed   += (Pads_Analog->RTrigger * speed) - (Pads_Analog->LTrigger * speed);
-            Display_TintGreen += (Pads_Analog->RTrigger * speed) - (Pads_Analog->LTrigger * speed);
-            Display_TintBlue  += (Pads_Analog->RTrigger * speed) - (Pads_Analog->LTrigger * speed);
+            Display_TintRed   += (Pads_Analog[g_PadNum].RTrigger * speed) - (Pads_Analog[g_PadNum].LTrigger * speed);
+            Display_TintGreen += (Pads_Analog[g_PadNum].RTrigger * speed) - (Pads_Analog[g_PadNum].LTrigger * speed);
+            Display_TintBlue  += (Pads_Analog[g_PadNum].RTrigger * speed) - (Pads_Analog[g_PadNum].LTrigger * speed);
             if (isButtonPressed(Button_B, g_PadNum)) {
                 Display_TintRed   = 1.0;
                 Display_TintGreen = 1.0;
@@ -209,19 +241,19 @@ void doColorControls() {
 
             break;
         case 1:
-            Display_TintRed += (Pads_Analog->RTrigger * speed) -  (Pads_Analog->LTrigger * speed);
+            Display_TintRed += (Pads_Analog[g_PadNum].RTrigger * speed) -  (Pads_Analog[g_PadNum].LTrigger * speed);
             if (isButtonPressed(Button_B, g_PadNum)) {
                 Display_TintRed = 1.0;
             }
             break;
         case 2:
-            Display_TintGreen += (Pads_Analog->RTrigger * speed) -  (Pads_Analog->LTrigger * speed);
+            Display_TintGreen += (Pads_Analog[g_PadNum].RTrigger * speed) -  (Pads_Analog[g_PadNum].LTrigger * speed);
             if (isButtonPressed(Button_B, g_PadNum)) {
                 Display_TintGreen = 1.0;
             }
             break;
         case 3:
-            Display_TintBlue += (Pads_Analog->RTrigger * speed) -  (Pads_Analog->LTrigger * speed);
+            Display_TintBlue += (Pads_Analog[g_PadNum].RTrigger * speed) -  (Pads_Analog[g_PadNum].LTrigger * speed);
             if (isButtonPressed(Button_B, g_PadNum)) {
                 Display_TintBlue = 1.0;
             }
@@ -245,7 +277,7 @@ void doBrightnessControls() {
 
     switch(brightOption) {
         case 0:
-            GC_Contrast += (Pads_Analog->RTrigger * speed) - (Pads_Analog->LTrigger * speed);
+            GC_Contrast += (Pads_Analog[g_PadNum].RTrigger * speed) - (Pads_Analog[g_PadNum].LTrigger * speed);
             if (isButtonPressed(Button_B, g_PadNum)) {
                 GC_Contrast = 1.11000001;
             }
@@ -281,13 +313,13 @@ void doFogControls() {
 
     switch(fogOption) {
         case 0:
-            GC_Fog_Near_Scale += (Pads_Analog->RTrigger * speed) - (Pads_Analog->LTrigger * speed);
+            GC_Fog_Near_Scale += (Pads_Analog[g_PadNum].RTrigger * speed) - (Pads_Analog[g_PadNum].LTrigger * speed);
             if (isButtonPressed(Button_B, g_PadNum)) {
                 GC_Fog_Near_Scale = 1.0;
             }
             break;
         case 1:
-            GC_Fog_Far_Scale += (Pads_Analog->RTrigger * speed) - (Pads_Analog->LTrigger * speed);
+            GC_Fog_Far_Scale += (Pads_Analog[g_PadNum].RTrigger * speed) - (Pads_Analog[g_PadNum].LTrigger * speed);
             if (isButtonPressed(Button_B, g_PadNum)) {
                 GC_Fog_Far_Scale = 1.0;
             }
@@ -295,6 +327,80 @@ void doFogControls() {
         default:
             break;
     }
+}
+
+void doPositionControls() {
+    float speed = 0.05;
+
+    if (isButtonPressed(Button_Dpad_Down, g_PadNum)) {
+        positionOption++;
+        if (positionOption > 5) { positionOption = 0; }
+    }
+    if (isButtonPressed(Button_Dpad_Up, g_PadNum)) {
+        positionOption--;
+        if (positionOption < 0) { positionOption = 5; }
+    }
+
+    switch (positionOption) {
+        case 0:
+            currentPlayerPos.x += Pads_Analog[g_PadNum].RTrigger * speed;
+            currentPlayerPos.x -= Pads_Analog[g_PadNum].LTrigger * speed;
+
+            if (isButtonPressed(Button_B, g_PadNum)) {
+                currentPlayerPos.x = savedPlayerPos.x;
+            }
+
+            break;
+        case 1:
+            currentPlayerPos.y += Pads_Analog[g_PadNum].RTrigger * speed;
+            currentPlayerPos.y -= Pads_Analog[g_PadNum].LTrigger * speed;
+
+            if (isButtonPressed(Button_B, g_PadNum)) {
+                currentPlayerPos.y = savedPlayerPos.y;
+            }
+        
+            break;
+        case 2:
+            currentPlayerPos.z += Pads_Analog[g_PadNum].RTrigger * speed;
+            currentPlayerPos.z -= Pads_Analog[g_PadNum].LTrigger * speed;
+
+            if (isButtonPressed(Button_B, g_PadNum)) {
+                currentPlayerPos.z = savedPlayerPos.z;
+            }
+        
+            break;
+        case 3:
+            currentPlayerRot.x += Pads_Analog[g_PadNum].RTrigger * speed;
+            currentPlayerRot.x -= Pads_Analog[g_PadNum].LTrigger * speed;
+
+            if (isButtonPressed(Button_B, g_PadNum)) {
+                currentPlayerRot.x = savedPlayerRot.x;
+            }
+        
+            break;
+        case 4:
+            currentPlayerRot.y += Pads_Analog[g_PadNum].RTrigger * speed;
+            currentPlayerRot.y -= Pads_Analog[g_PadNum].LTrigger * speed;
+
+            if (isButtonPressed(Button_B, g_PadNum)) {
+                currentPlayerRot.y = savedPlayerRot.y;
+            }
+        
+            break;
+        case 5:
+            currentPlayerRot.z += Pads_Analog[g_PadNum].RTrigger * speed;
+            currentPlayerRot.z -= Pads_Analog[g_PadNum].LTrigger * speed;
+
+            if (isButtonPressed(Button_B, g_PadNum)) {
+                currentPlayerRot.z = savedPlayerRot.z;
+            }
+        
+            break;
+        default:
+            break;
+    }
+
+    updateAnimatorMatrix();
 }
 
 void doMiscControls() {
@@ -338,7 +444,7 @@ void doMiscControls() {
 
             break;
         case 3:
-            GC_Shadow_Precision_Scale += (Pads_Analog->RTrigger * 0.03) - (Pads_Analog->LTrigger * 0.03);
+            GC_Shadow_Precision_Scale += (Pads_Analog[g_PadNum].RTrigger * 0.03) - (Pads_Analog[g_PadNum].LTrigger * 0.03);
             
             if (GC_Shadow_Precision_Scale < 0.5)  { GC_Shadow_Precision_Scale = 0.5;  }
             if (GC_Shadow_Precision_Scale > 10.0) { GC_Shadow_Precision_Scale = 10.0; }
