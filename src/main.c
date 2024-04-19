@@ -250,7 +250,7 @@ void MainUpdate() {
             if (mode >= NUM_MODES) { mode = 0; }
         }
 
-        if (isButtonPressed(Button_B, g_PadNum)) {
+        if (isButtonPressed(Button_A, g_PadNum)) {
             hudIsOn = !hudIsOn;
         }
 
@@ -395,8 +395,8 @@ void DrawUpdate() {
             textPrint("[X/Y] Incremental", 0, 20, 280, TopLeft, &COLOR_LIGHT_GREEN, 1.0);
         }
 
-        textPrint("General Controls:\n[A] Reset Param   [Dpad] Browse   [L/R] Change Value\n"
-                  "[Start] Reset All   [B] Toggle HUD   [Z] Exit", 0, 20, 380, TopLeft, &COLOR_LIGHT_GREEN, 1.0);
+        textPrint("General Controls:\n[B] Reset Param   [Dpad] Browse   [L/R] Change Value\n"
+                  "[Start] Reset All   [A] Toggle HUD   [Z] Exit", 0, 20, 380, TopLeft, &COLOR_LIGHT_GREEN, 1.0);
     }
 
     if (!inPhotoMode && playerInScanMode()) {
@@ -415,6 +415,7 @@ void DrawUpdate() {
 //scan_hook.s | On the frame this function returns true, scanmode will be enabled/disabled.
 //Typically you'd return true if a button has just been pressed.
 bool ScanUpdate() {
+    //Hold d-pad up and press Z
     return isButtonPressed(Button_Z, g_PadNum) && isButtonDown(Button_Dpad_Up, g_PadNum);
 }
 

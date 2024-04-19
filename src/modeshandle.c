@@ -143,7 +143,7 @@ void doCamControls() {
     if (gCommonCamera.VFov > 2.0)  { gCommonCamera.VFov = 2.0;  }
     if (gCommonCamera.VFov < 0.05) { gCommonCamera.VFov = 0.05; }
 
-    if (isButtonPressed(Button_A, g_PadNum)) {
+    if (isButtonPressed(Button_B, g_PadNum)) {
         gCommonCamera.VFov = 1.05;
     }
 
@@ -201,7 +201,7 @@ void doColorControls() {
             Display_TintRed   += (Pads_Analog->RTrigger * speed) - (Pads_Analog->LTrigger * speed);
             Display_TintGreen += (Pads_Analog->RTrigger * speed) - (Pads_Analog->LTrigger * speed);
             Display_TintBlue  += (Pads_Analog->RTrigger * speed) - (Pads_Analog->LTrigger * speed);
-            if (isButtonPressed(Button_A, g_PadNum)) {
+            if (isButtonPressed(Button_B, g_PadNum)) {
                 Display_TintRed   = 1.0;
                 Display_TintGreen = 1.0;
                 Display_TintBlue  = 1.0;
@@ -210,19 +210,19 @@ void doColorControls() {
             break;
         case 1:
             Display_TintRed += (Pads_Analog->RTrigger * speed) -  (Pads_Analog->LTrigger * speed);
-            if (isButtonPressed(Button_A, g_PadNum)) {
+            if (isButtonPressed(Button_B, g_PadNum)) {
                 Display_TintRed = 1.0;
             }
             break;
         case 2:
             Display_TintGreen += (Pads_Analog->RTrigger * speed) -  (Pads_Analog->LTrigger * speed);
-            if (isButtonPressed(Button_A, g_PadNum)) {
+            if (isButtonPressed(Button_B, g_PadNum)) {
                 Display_TintGreen = 1.0;
             }
             break;
         case 3:
             Display_TintBlue += (Pads_Analog->RTrigger * speed) -  (Pads_Analog->LTrigger * speed);
-            if (isButtonPressed(Button_A, g_PadNum)) {
+            if (isButtonPressed(Button_B, g_PadNum)) {
                 Display_TintBlue = 1.0;
             }
             break;
@@ -246,7 +246,7 @@ void doBrightnessControls() {
     switch(brightOption) {
         case 0:
             GC_Contrast += (Pads_Analog->RTrigger * speed) - (Pads_Analog->LTrigger * speed);
-            if (isButtonPressed(Button_A, g_PadNum)) {
+            if (isButtonPressed(Button_B, g_PadNum)) {
                 GC_Contrast = 1.11000001;
             }
             break;
@@ -258,7 +258,7 @@ void doBrightnessControls() {
                 Display_BloomIntensity--;
             }
 
-            if (isButtonPressed(Button_A, g_PadNum)) {
+            if (isButtonPressed(Button_B, g_PadNum)) {
                 Display_BloomIntensity = 0x40;
             }
             break;
@@ -282,13 +282,13 @@ void doFogControls() {
     switch(fogOption) {
         case 0:
             GC_Fog_Near_Scale += (Pads_Analog->RTrigger * speed) - (Pads_Analog->LTrigger * speed);
-            if (isButtonPressed(Button_A, g_PadNum)) {
+            if (isButtonPressed(Button_B, g_PadNum)) {
                 GC_Fog_Near_Scale = 1.0;
             }
             break;
         case 1:
             GC_Fog_Far_Scale += (Pads_Analog->RTrigger * speed) - (Pads_Analog->LTrigger * speed);
-            if (isButtonPressed(Button_A, g_PadNum)) {
+            if (isButtonPressed(Button_B, g_PadNum)) {
                 GC_Fog_Far_Scale = 1.0;
             }
             break;
@@ -320,7 +320,7 @@ void doMiscControls() {
                 if (engineFrameRate < 30) { engineFrameRate = 30; }
             }
 
-            if (isButtonPressed(Button_A, g_PadNum)) {
+            if (isButtonPressed(Button_B, g_PadNum)) {
                 engineFrameRate = 60;
             }
             
@@ -343,7 +343,7 @@ void doMiscControls() {
             if (GC_Shadow_Precision_Scale < 0.5)  { GC_Shadow_Precision_Scale = 0.5;  }
             if (GC_Shadow_Precision_Scale > 10.0) { GC_Shadow_Precision_Scale = 10.0; }
 
-            if (isButtonPressed(Button_A, g_PadNum)) {
+            if (isButtonPressed(Button_B, g_PadNum)) {
                 GC_Shadow_Precision_Scale = 2.0;
             }
 
