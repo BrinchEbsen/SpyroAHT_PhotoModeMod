@@ -20,6 +20,23 @@ int* customCam = NULL;
 EXVector savedCamHandlerPos  = {0};
 EXVector savedCamHandlerLook = {0};
 
+void updateLightingVector() {
+    if (doLightingUpdate) {
+        int* camHandler = *(gpGameWnd + 0x378/4);
+        EXVector* camPos  = (EXVector*) (camHandler + 0x298/4);
+        EXVector* camLook = (EXVector*) (camHandler + 0x2A8/4);
+
+        camPos->x  = gCommonCamera.Position.x;
+        camPos->y  = gCommonCamera.Position.y;
+        camPos->z  = gCommonCamera.Position.z;
+        camPos->w  = gCommonCamera.Position.w;
+        camLook->x = gCommonCamera.Target.x;
+        camLook->y = gCommonCamera.Target.y;
+        camLook->z = gCommonCamera.Target.z;
+        camLook->w = gCommonCamera.Target.w;
+    }
+}
+
 bool headTrackEnabled() {
     int flags = *(gpPlayer + (0x614/4));
 
@@ -164,20 +181,7 @@ void doCamControls() {
     gCommonCamera.Distance = gCommonCamera.Rect.h * 0.5 * (1.0 / ig_tanf(gCommonCamera.VFov * 0.5));
 
     //Set camera handler's vectors to match, so the lighting adapts
-    if (doLightingUpdate) {
-        int* camHandler = *(gpGameWnd + 0x378/4);
-        EXVector* camPos  = (EXVector*) (camHandler + 0x298/4);
-        EXVector* camLook = (EXVector*) (camHandler + 0x2A8/4);
-
-        camPos->x  = gCommonCamera.Position.x;
-        camPos->y  = gCommonCamera.Position.y;
-        camPos->z  = gCommonCamera.Position.z;
-        camPos->w  = gCommonCamera.Position.w;
-        camLook->x = gCommonCamera.Target.x;
-        camLook->y = gCommonCamera.Target.y;
-        camLook->z = gCommonCamera.Target.z;
-        camLook->w = gCommonCamera.Target.w;
-    }
+    updateLightingVector();
 }
 
 void doColorControls() {
@@ -367,6 +371,7 @@ void doMiscControls() {
         case 5:
             if (isButtonPressed(Button_L | Button_R, g_PadNum)) {
                 doLightingUpdate = !doLightingUpdate;
+                updateLightingVector();
             }
 
             break;
