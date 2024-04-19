@@ -1,0 +1,2 @@
+hooks:
+[('MainUpdateHook', '0x8026fa6c', '0x26ca6c', ['main_hook.s'], '-0x3000'), ('HUDDrawHook', '0x80222244', '0x21f244', ['draw_hook.s'], '-0x3000'), ('ScanModeHook', '0x8005c954', '0x59954', ['scan_hook.s'], '-0x3000')]

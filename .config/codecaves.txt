@@ -1,0 +1,2 @@
+Codecaves:
+[('MainCodecave', '0x803D8FB0', '0x3d5fb0', ['main.c'], '0x-3000', '0x2010'), ('SharkCodeCave', '0x801858c0', '0x1828c0', ['buttons.c', 'colors.c', 'textprint.c', 'rotation.c', 'modeshandle.c'], '0x-3000', '0x1D60')]
