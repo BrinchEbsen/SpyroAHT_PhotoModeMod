@@ -54,10 +54,6 @@ void init() {
     *(int*)0x80445D44 = GUI_PanelItem_ptr;
     *(int*)0x8042e30c = GUI_ScreenItem_ptr;
     *(int*)0x8044723c = XItem_DoItemUpdate_ptr;
-
-    //TEST
-
-    
 }
 
 void saveCamHandlerVecs() {
