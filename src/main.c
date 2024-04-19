@@ -403,7 +403,7 @@ void DrawUpdate() {
         if (gpPlayer == NULL) { return; }
         uint animMode = getCurrentAnimMode();
 
-        textSmpPrintF(20, 130, "Current AnimMode: %x", animMode);
+        textSmpPrintF(20, 130, "Current AnimMode: %d", animMode & 0xFFFF);
         textSmpPrint("Dpad left/right: Change", 0, 20, 150);
         textSmpPrint("Dpad down: Restart Anim", 0, 20, 170);
         textSmpPrintF(20, 190, "R: Turn Headtracking %s", headTrackEnabled() ? "Off" : "On");
