@@ -106,6 +106,7 @@ void doScanmodeControls() {
     if (isButtonPressed(Button_Dpad_Right, g_PadNum)) {
         //ig_printf("before: %x\n", currmode);
         
+        //Loop through animmodes until one is found that returns true (aka. it exists)
         while (true) {
             newMode++;
             if (newMode >= HT_AnimMode_HASHCODE_END) {
@@ -332,66 +333,58 @@ void doFogControls() {
 void doPositionControls() {
     float speed = 0.05;
 
+    if (isButtonDown(Button_Y, g_PadNum)) {
+        speed = 0.2;
+    } else if(isButtonDown(Button_X, g_PadNum)) {
+        speed = 0.01;
+    }
+
     if (isButtonPressed(Button_Dpad_Down, g_PadNum)) {
         positionOption++;
-        if (positionOption > 5) { positionOption = 0; }
+        if (positionOption > 1) { positionOption = 0; }
     }
     if (isButtonPressed(Button_Dpad_Up, g_PadNum)) {
         positionOption--;
-        if (positionOption < 0) { positionOption = 5; }
+        if (positionOption < 0) { positionOption = 1; }
     }
+
+    float stickY = Pads_Analog[g_PadNum].LStick_Y;
+    float stickX = Pads_Analog[g_PadNum].LStick_X;
+    float trigL  = Pads_Analog[g_PadNum].LTrigger;
+    float trigR  = Pads_Analog[g_PadNum].RTrigger;
 
     switch (positionOption) {
         case 0:
-            currentPlayerPos.x += Pads_Analog[g_PadNum].RTrigger * speed;
-            currentPlayerPos.x -= Pads_Analog[g_PadNum].LTrigger * speed;
+            //Camera point vector
+            float camPointX = CamMatrix.row0.x;
+            float camPointZ = CamMatrix.row0.z;
+
+            //Move the horizontally with the left stick, vertically with the triggers
+            float moveX = stickX * camPointX + stickY * camPointZ;
+            float moveZ = stickX * camPointZ + stickY * (-camPointX);
+            float moveY = (trigR)*2 + (-trigL)*2;
+
+            currentPlayerPos.x += moveX * speed;
+            currentPlayerPos.y += moveY * speed;
+            currentPlayerPos.z += moveZ * speed;
 
             if (isButtonPressed(Button_B, g_PadNum)) {
                 currentPlayerPos.x = savedPlayerPos.x;
+                currentPlayerPos.y = savedPlayerPos.y;
+                currentPlayerPos.z = savedPlayerPos.z;
             }
 
             break;
         case 1:
-            currentPlayerPos.y += Pads_Analog[g_PadNum].RTrigger * speed;
-            currentPlayerPos.y -= Pads_Analog[g_PadNum].LTrigger * speed;
+            currentPlayerRot.x += stickY * speed;
+            currentPlayerRot.y += stickX * speed;
 
-            if (isButtonPressed(Button_B, g_PadNum)) {
-                currentPlayerPos.y = savedPlayerPos.y;
-            }
-        
-            break;
-        case 2:
-            currentPlayerPos.z += Pads_Analog[g_PadNum].RTrigger * speed;
-            currentPlayerPos.z -= Pads_Analog[g_PadNum].LTrigger * speed;
-
-            if (isButtonPressed(Button_B, g_PadNum)) {
-                currentPlayerPos.z = savedPlayerPos.z;
-            }
-        
-            break;
-        case 3:
-            currentPlayerRot.x += Pads_Analog[g_PadNum].RTrigger * speed;
-            currentPlayerRot.x -= Pads_Analog[g_PadNum].LTrigger * speed;
+            currentPlayerRot.z -= trigL * speed;
+            currentPlayerRot.z += trigR * speed;
 
             if (isButtonPressed(Button_B, g_PadNum)) {
                 currentPlayerRot.x = savedPlayerRot.x;
-            }
-        
-            break;
-        case 4:
-            currentPlayerRot.y += Pads_Analog[g_PadNum].RTrigger * speed;
-            currentPlayerRot.y -= Pads_Analog[g_PadNum].LTrigger * speed;
-
-            if (isButtonPressed(Button_B, g_PadNum)) {
                 currentPlayerRot.y = savedPlayerRot.y;
-            }
-        
-            break;
-        case 5:
-            currentPlayerRot.z += Pads_Analog[g_PadNum].RTrigger * speed;
-            currentPlayerRot.z -= Pads_Analog[g_PadNum].LTrigger * speed;
-
-            if (isButtonPressed(Button_B, g_PadNum)) {
                 currentPlayerRot.z = savedPlayerRot.z;
             }
         

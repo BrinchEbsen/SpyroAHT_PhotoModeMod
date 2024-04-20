@@ -385,21 +385,11 @@ void DrawUpdate() {
             case POSITION:
                 textPrint("<Player Position>", 0, 20, 100, TopLeft, &COLOR_TEXT, 1.2);
 
-                
+                XRGBA* posCol = positionOption == 0 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                XRGBA* rotCol = positionOption == 1 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
 
-                XRGBA* PosXCol = positionOption == 0 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
-                XRGBA* PosYCol = positionOption == 1 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
-                XRGBA* PosZCol = positionOption == 2 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
-                XRGBA* RotXCol = positionOption == 3 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
-                XRGBA* RotYCol = positionOption == 4 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
-                XRGBA* RotZCol = positionOption == 5 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
-
-                textPrint("x", 0, 20, 130, TopLeft, PosXCol, 1.0);
-                textPrint("y", 0, 20, 145, TopLeft, PosYCol, 1.0);
-                textPrint("z", 0, 20, 160, TopLeft, PosZCol, 1.0);
-                textPrint("x", 0, 20, 175, TopLeft, RotXCol, 1.0);
-                textPrint("y", 0, 20, 190, TopLeft, RotYCol, 1.0);
-                textPrint("z", 0, 20, 205, TopLeft, RotZCol, 1.0);
+                textPrint("Position", 0, 20, 130, TopLeft, posCol, 1.0);
+                textPrint("Rotation", 0, 20, 145, TopLeft, rotCol, 1.0);
 
                 break;
             case MISC:
