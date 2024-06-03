@@ -137,6 +137,7 @@ in_game void GameLoop_DisplayOn(int* loop, int ChildFlag); //0x80230aa4
 
 in_game int GUI_PanelItem_Draw(int* panelItem, int* wnd); //0x80220b10
 in_game int GUI_ScreenItem_Draw(int* screenItem, int* wnd); //0x801b2878
+in_game int GUI_Screen_Draw(int* screen, int* wnd); //0x801b3fe8
 
 in_game float GC_Fog_Near_Scale; //0x804CBC3C
 in_game float GC_Fog_Far_Scale; //0x804CBC40
@@ -154,6 +155,28 @@ in_game void ItemHandler_ChangeAnimSkin(int* self, int* animator, uint skinHash)
 
 in_game uint Animator_ChangeToAnimMode(int* self, uint CurAnimMode, uint NewAnimMode, uint DefAnimMode); //0x802a32a8
 in_game bool Player_ForceModeChange(int* self, uint newMode); //0x8005b63c
+in_game char* ItemHandler_GetName(int* self); //0x80109f38
+
+in_game float AnimatorAnim_GetCurrentFrame(int* self); //0x80212ac8
+in_game void  AnimatorAnim_SetCurrentFrame(int* self, double frame); //0x802129a4
+in_game float AnimatorScript_GetCurrentFrame(int* self); //0x802b2264
+in_game void  AnimatorScript_SetCurrentFrame(int* self, double frame); //0x802b2218
+in_game float Animator_GetObjectTime(int* self); //0x802a203c
+in_game void  Animator_SetObjectTime(int* self, float time); //0x802a2004
+in_game void  Animator_UpdateObjectTime(int* self, float time); //0x802a2074
+in_game void  Animator_ForceUpdate(int* self); //0x802a409c
+
+in_game void EXMatrix_GetRotation(mat44* self, EXVector* vct, byte axis); //0x802c9cbc
+
+in_game void BlinkFX_Update(AnimFX_Blink* self); //0x80066af4
+
+in_game void* Item_GetAnimatorDatum(void *this, uint DatumRef, int *Datum, uint Flags, void *pPrevPtr); //0x802a1310
+in_game bool GetAnimDatum(int* m_pItem, uint hash, uint flags, EXVector *vtc); //0x800ee608
+
+in_game u16* GetMapOn(u16* mapOn, int* ItemEnv, EXVector* vct); //0x802baacc
+in_game int* GetMapItem(int* ItemEnv, char mapID); //0x802ba988
+
+in_game void Animator_ApplyMatrixBoundsBox(int* animator, int* InBounds, int* Bounds, uint Flags); //0x802a1e6c
 
 //XSEItemHandler_Camera::Update(void)
 in_game void Camera_Update(int* self); //0x801296a8

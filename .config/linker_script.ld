@@ -7,9 +7,12 @@ MEMORY
     /* RAM locations where we'll inject the code for our replacement functions */
     MainCodecave : ORIGIN = 0x803D8FB0, LENGTH = 0x2010
     SharkCodeCave : ORIGIN = 0x801858c0, LENGTH = 0x1D60
+    ViewerCodeCave : ORIGIN = 0x80296618, LENGTH = 0x7dcc
     MainUpdateHook : ORIGIN = 0x8026fa6c, LENGTH = 0x100000
     HUDDrawHook : ORIGIN = 0x80222244, LENGTH = 0x100000
     ScanModeHook : ORIGIN = 0x8005c954, LENGTH = 0x100000
+    GUIScreenHook : ORIGIN = 0x80222234, LENGTH = 0x100000
+    AnimatorAnimBoundsHook : ORIGIN = 0x802a587c, LENGTH = 0x100000
 }
 
 SECTIONS
@@ -45,6 +48,26 @@ SECTIONS
         scan_hook.o(.bss)
     } > ScanModeHook
 
+    /* Custom section for our hook code */
+    .GUIScreenHook : 
+    {
+        screen_hook.o(.text)
+        screen_hook.o(.rodata)
+        screen_hook.o(.rodata*)
+        screen_hook.o(.data)
+        screen_hook.o(.bss)
+    } > GUIScreenHook
+
+    /* Custom section for our hook code */
+    .AnimatorAnimBoundsHook : 
+    {
+        animatoranim_bounds_hook.o(.text)
+        animatoranim_bounds_hook.o(.rodata)
+        animatoranim_bounds_hook.o(.rodata*)
+        animatoranim_bounds_hook.o(.data)
+        animatoranim_bounds_hook.o(.bss)
+    } > AnimatorAnimBoundsHook
+
     .MainCodecave : 
     {
         main.o(.text)
@@ -78,6 +101,15 @@ SECTIONS
         colors.o(.sbss)
         colors.o(.scommon)
         colors.o(.colors.o.*)
+        screenmath.o(.text)
+        screenmath.o(.rodata)
+        screenmath.o(.rodata*)
+        screenmath.o(.data)
+        screenmath.o(.bss)
+        screenmath.o(.sdata)
+        screenmath.o(.sbss)
+        screenmath.o(.scommon)
+        screenmath.o(.screenmath.o.*)
         textprint.o(.text)
         textprint.o(.rodata)
         textprint.o(.rodata*)
@@ -96,6 +128,10 @@ SECTIONS
         rotation.o(.sbss)
         rotation.o(.scommon)
         rotation.o(.rotation.o.*)
+    } > SharkCodeCave
+
+    .ViewerCodeCave : 
+    {
         modeshandle.o(.text)
         modeshandle.o(.rodata)
         modeshandle.o(.rodata*)
@@ -107,7 +143,7 @@ SECTIONS
         modeshandle.o(.modeshandle.o.*)
         *(.text) /* Last section, place any potential remaining code sections */
         *(.branch_lt)
-    } > SharkCodeCave
+    } > ViewerCodeCave
 
     /DISCARD/ :
     {

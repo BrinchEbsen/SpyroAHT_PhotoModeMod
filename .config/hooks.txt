@@ -1,2 +1,2 @@
 hooks:
-[('MainUpdateHook', '0x8026fa6c', '0x26ca6c', ['main_hook.s'], '-0x3000'), ('HUDDrawHook', '0x80222244', '0x21f244', ['draw_hook.s'], '-0x3000'), ('ScanModeHook', '0x8005c954', '0x59954', ['scan_hook.s'], '-0x3000')]
+[('MainUpdateHook', '0x8026fa6c', '0x26ca6c', ['main_hook.s'], '-0x3000'), ('HUDDrawHook', '0x80222244', '0x21f244', ['draw_hook.s'], '-0x3000'), ('ScanModeHook', '0x8005c954', '0x59954', ['scan_hook.s'], '-0x3000'), ('GUIScreenHook', '0x80222234', '0x21f234', ['screen_hook.s'], '-0x3000'), ('AnimatorAnimBoundsHook', '0x802a587c', '0x2a287c', ['animatoranim_bounds_hook.s'], '-0x3000')]

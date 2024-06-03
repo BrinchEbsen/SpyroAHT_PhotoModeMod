@@ -7,10 +7,9 @@
 extern s8 colorOption;
 extern s8 fogOption;
 extern s8 brightOption;
+extern s8 animOption;
 extern s8 positionOption;
 extern s8 miscOption;
-
-extern bool doFrameAdvance;
 
 extern bool doLightingUpdate;
 
@@ -22,16 +21,38 @@ extern EXVector savedCamHandlerLook;
 bool headTrackEnabled();
 void setHeadTracking(bool enable);
 
-EXVector* getPlayerPosition();
-EXVector* getPlayerRotation();
+void updateCameraViewport();
+
+EXVector* getItemPosition(int* item);
+EXVector* getItemRotation(int* item);
 
 extern EXVector savedPlayerRot;
 extern EXVector savedPlayerPos;
 
-extern EXVector currentPlayerRot;
-extern EXVector currentPlayerPos;
+extern EXVector selectedItemRot;
+extern EXVector selectedItemPos;
+
+extern EXDListItem* selectedItem;
+
+extern bool doCameraFollow;
+
+void EXVector_Copy(EXVector* dest, EXVector* src);
+void EXVector_Add(EXVector* dest, EXVector* add);
+
+EXVector* mat_44_get_position(mat44* mat, EXVector* outvct);
+EXVector* mat_44_get_rotation(mat44* mat, EXVector* outvct);
 
 void updateAnimatorMatrix();
+int* getItemAnimator(int* item);
+mat44* getAnimatorMatrix(int* anim);
+
+EXVector* getItemPosition(int* item);
+EXVector* getItemRotation(int* item);
+
+int* getZoneInfo();
+DrawRender* getZoneFogInfo();
+XRGBA* getZoneFogColour();
+bool* getZoneFogEnabled();
 
 //Get the player's animator
 int* getPlayerAnimator();
@@ -55,10 +76,14 @@ void doBrightnessControls();
 //"Fog" Mode
 void doFogControls();
 
+void doAnimControls();
+
 //"Position" Mode
 void doPositionControls();
 
 //"Misc" Mode
 void doMiscControls();
+
+void doItemControls();
 
 #endif /* MODESHANDLE_H */

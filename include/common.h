@@ -2,8 +2,6 @@
 #define COMMON_H
 #include <custom_types.h>
 
-//Structs
-
 struct EXVector
 {
     float x;
@@ -102,7 +100,38 @@ struct EXCommonCamera
 };
 typedef struct EXCommonCamera EXCommonCamera;
 
-//Enums
+struct DrawRender
+{
+    float FogNear;
+    float FogFar;
+    float FogMin;
+    float FogMax;
+    XRGBA FogColor;
+    bool FogEnabled;
+};
+typedef struct DrawRender DrawRender;
+
+enum BlinkStates
+{
+    starting = 0,
+    opening = 1,
+    closing = 2,
+    idle = 3,
+    forceclose = 4,
+    doubleblink = 5
+};
+typedef enum BlinkStates BlinkStates;
+
+struct AnimFX_Blink
+{
+    int BlinkFlags;
+    int BlinkTimer;
+    int BlinkIndex;
+    float BlinkMorph;
+    int* m_pItem;
+    BlinkStates BlinkState;
+};
+typedef struct AnimFX_Blink AnimFX_Blink;
 
 enum TextAlign
 {
@@ -233,5 +262,8 @@ extern XRGBA COLOR_BLUE;
 extern XRGBA COLOR_LIGHT_RED;
 extern XRGBA COLOR_LIGHT_GREEN;
 extern XRGBA COLOR_LIGHT_BLUE;
+extern XRGBA COLOR_DARK_RED;
+extern XRGBA COLOR_DARK_GREEN;
+extern XRGBA COLOR_DARK_BLUE;
 
 #endif /* COMMON_H */

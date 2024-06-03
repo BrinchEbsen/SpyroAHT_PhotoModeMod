@@ -16,22 +16,18 @@ bool hasInit = false;
 //We have to declare the functions replaced in the vtable hooks
 int GUI_PanelItem_Hook(int* panelItem, int* wnd);
 int GUI_ScreenItem_Hook(int* screenItem, int* wnd);
-void XItem_DoItemUpdate_Hook(int* self);
+//void XItem_DoItemUpdate_Hook(int* self);
 
-#define NUM_MODES 6
+#define NUM_MODES 5
 
 enum
 {
     MOVE,
     TINT,
-    BRIGHT,
     FOG,
-    POSITION,
-    MISC
+    MISC,
+    ITEM
 };
-
-in_game int PlayAnimators_NoPause; //0x803E3CD8
-in_game int PlayAnimators_Pause; //0x803E3CDC
 
 //Game logic has paused (when pressing the start button etc.)
 bool gamePaused;
@@ -44,17 +40,19 @@ bool gameHudIsOn = true;
 //Current selected mode in the photo mode
 int mode = MOVE;
 
+DrawRender storedFogInfo = {0};
+
 //Stuff to do on startup
 void init() {
     //VTABLE HOOKS
     //Get function pointer to our hook
     int (*GUI_PanelItem_ptr)(int*, int*) = GUI_PanelItem_Hook;
     int (*GUI_ScreenItem_ptr)(int*, int*) = GUI_ScreenItem_Hook;
-    void (*XItem_DoItemUpdate_ptr)(int*) = XItem_DoItemUpdate_Hook;
+    //void (*XItem_DoItemUpdate_ptr)(int*) = XItem_DoItemUpdate_Hook;
     //Store that hook pointer at the virtual function we're replacing (v_Draw)
     *(int*)0x80445D44 = GUI_PanelItem_ptr;
     *(int*)0x8042e30c = GUI_ScreenItem_ptr;
-    *(int*)0x8044723c = XItem_DoItemUpdate_ptr;
+    //*(int*)0x8044723c = XItem_DoItemUpdate_ptr;
 }
 
 void saveCamHandlerVecs() {
@@ -72,29 +70,59 @@ void saveCamHandlerVecs() {
     savedCamHandlerLook.w = camLook->w;
 }
 
+void saveFogInfo() {
+    DrawRender* fogInfo = getZoneFogInfo();
+    if (fogInfo == NULL) { return; }
+
+    storedFogInfo.FogNear    = fogInfo->FogNear;
+    storedFogInfo.FogFar     = fogInfo->FogFar;
+    storedFogInfo.FogMin     = fogInfo->FogMin;
+    storedFogInfo.FogMax     = fogInfo->FogMax;
+    storedFogInfo.FogColor.r = fogInfo->FogColor.r;
+    storedFogInfo.FogColor.g = fogInfo->FogColor.g;
+    storedFogInfo.FogColor.b = fogInfo->FogColor.b;
+    storedFogInfo.FogColor.a = fogInfo->FogColor.a;
+    storedFogInfo.FogEnabled = fogInfo->FogEnabled;
+}
+
+void restoreFogInfo() {
+    DrawRender* fogInfo = getZoneFogInfo();
+    if (fogInfo == NULL) { return; }
+
+    fogInfo->FogNear    = storedFogInfo.FogNear;
+    fogInfo->FogFar     = storedFogInfo.FogFar;
+    fogInfo->FogMin     = storedFogInfo.FogMin;
+    fogInfo->FogMax     = storedFogInfo.FogMax;
+    fogInfo->FogColor.r = storedFogInfo.FogColor.r;
+    fogInfo->FogColor.g = storedFogInfo.FogColor.g;
+    fogInfo->FogColor.b = storedFogInfo.FogColor.b;
+    fogInfo->FogColor.a = storedFogInfo.FogColor.a;
+    fogInfo->FogEnabled = storedFogInfo.FogEnabled;
+}
+
 void savePlayerTransform() {
-    EXVector* pos = getPlayerPosition();
+    EXVector* pos = getItemPosition(gpPlayerItem);
     if (pos == NULL) { return; }
-    EXVector* rot = getPlayerRotation();
+    EXVector* rot = getItemRotation(gpPlayerItem);
     if (rot == NULL) { return; }
 
     savedPlayerPos.x = pos->x;
     savedPlayerPos.y = pos->y;
     savedPlayerPos.z = pos->z;
     savedPlayerPos.w = pos->w;
-    currentPlayerPos.x = pos->x;
-    currentPlayerPos.y = pos->y;
-    currentPlayerPos.z = pos->z;
-    currentPlayerPos.w = pos->w;
+    selectedItemPos.x = pos->x;
+    selectedItemPos.y = pos->y;
+    selectedItemPos.z = pos->z;
+    selectedItemPos.w = pos->w;
 
     savedPlayerRot.x = rot->x;
     savedPlayerRot.y = rot->y;
     savedPlayerRot.z = rot->z;
     savedPlayerRot.w = rot->w;
-    currentPlayerRot.x = rot->x;
-    currentPlayerRot.y = rot->y;
-    currentPlayerRot.z = rot->z;
-    currentPlayerRot.w = rot->w;
+    selectedItemRot.x = rot->x;
+    selectedItemRot.y = rot->y;
+    selectedItemRot.z = rot->z;
+    selectedItemRot.w = rot->w;
 }
 
 void restoreCamHandlerVecs() {
@@ -151,15 +179,7 @@ void resetValues() {
     engineFrameRate = 60;
     GC_Shadow_Precision_Scale = 2.0;
 
-    currentPlayerPos.x = savedPlayerPos.x;
-    currentPlayerPos.y = savedPlayerPos.y;
-    currentPlayerPos.z = savedPlayerPos.z;
-    currentPlayerPos.w = savedPlayerPos.w;
-    currentPlayerRot.x = savedPlayerRot.x;
-    currentPlayerRot.y = savedPlayerRot.y;
-    currentPlayerRot.z = savedPlayerRot.z;
-    currentPlayerRot.w = savedPlayerRot.w;
-    updateAnimatorMatrix();
+    restoreFogInfo();
 }
 
 bool checkZDoublePress() {
@@ -227,10 +247,42 @@ float getSpeedScale() {
     return (60.0 / (float)engineFrameRate);
 }
 
+bool selectedItemExists() {
+    EXDListItem* item = ItemEnv_ItemList->head;
+
+    if (item == NULL) { return false; }
+
+    do {
+        if (item == selectedItem) {
+            return true;
+        }
+        
+        item = item->next;
+    } while(item != NULL);
+
+    return false;
+}
+
+void drawItemMarker(EXVector* pos) {
+    static int counter = 0;
+    counter++;
+    counter = counter % 30;
+
+    int size;
+    if (counter < 15) {
+        size = 6;
+    } else {
+        size = 8;
+    }
+
+    drawSquareAtVec(pos, size*2, &COLOR_DARK_RED);
+    drawSquareAtVec(pos, size, &COLOR_RED);
+}
+
 //main_hook.s | Runs every frame
 void MainUpdate() {
     if (!hasInit) {
-        init();
+        //init();
         hasInit = true;
     }
 
@@ -258,8 +310,12 @@ void MainUpdate() {
             gameHudIsOn = true;
             GameSetPauseOff(&gGameLoop, 0);
             restoreCamHandlerVecs();
+            selectedItem = NULL;
             updatePauseState();
             gCommonCamera.VFov = 1.05;
+            updateCameraViewport();
+
+            PlaySFX(HT_Sound_SFX_GEN_HUD_NPC_SELECT);
         } else if (!inPhotoMode && !gamePaused) { //only let you enable if game is unpaused
             inPhotoMode = true;
             gameHudIsOn = false;
@@ -267,6 +323,9 @@ void MainUpdate() {
             saveCamHandlerVecs();
             updatePauseState();
             savePlayerTransform();
+            saveFogInfo();
+
+            PlaySFX(HT_Sound_SFX_GEN_HUD_PAUSE);
         }
     }
 
@@ -281,18 +340,32 @@ void MainUpdate() {
         if (isButtonPressed(Button_Dpad_Left, g_PadNum)) {
             mode--;
             if (mode < 0) { mode = NUM_MODES-1; }
+
+            PlaySFX(HT_Sound_SFX_GEN_HUD_CURSOR);
         }
         if (isButtonPressed(Button_Dpad_Right, g_PadNum)) {
             mode++;
             if (mode >= NUM_MODES) { mode = 0; }
+
+            PlaySFX(HT_Sound_SFX_GEN_HUD_CURSOR);
+        }
+
+        if(isButtonPressed(Button_Dpad_Right | Button_Dpad_Left, g_PadNum)) {
+            //If the selected item doesn't exist, we should reset it.
+            if (!selectedItemExists()) {
+                selectedItem = NULL;
+            }
         }
 
         if (isButtonPressed(Button_A, g_PadNum)) {
             hudIsOn = !hudIsOn;
+
+            PlaySFX(HT_Sound_SFX_GEN_HUD_NPC_CHOOSE);
         }
 
         if (isButtonPressed(Button_Start, g_PadNum)) {
             resetValues();
+            PlaySFX(HT_Sound_SFX_GEN_HUD_SELECT);
         }
 
         switch (mode) {
@@ -302,17 +375,14 @@ void MainUpdate() {
             case TINT:
                 doColorControls();
                 break;
-            case BRIGHT:
-                doBrightnessControls();
-                break;
             case FOG:
                 doFogControls();
                 break;
-            case POSITION:
-                doPositionControls();
-                break;
             case MISC:
                 doMiscControls();
+                break;
+            case ITEM:
+                doItemControls();
                 break;
             default:
                 break;
@@ -330,6 +400,17 @@ void DrawUpdate() {
     if (inPhotoMode && hudIsOn) {
         bool displayIncrementControls = false;
 
+        XRGBA* selCol1;
+        XRGBA* selCol2;
+        XRGBA* selCol3;
+        XRGBA* selCol4;
+        XRGBA* selCol5;
+        XRGBA* selCol6;
+        XRGBA* selCol7;
+        XRGBA* selCol8;
+        XRGBA* selCol9;
+        XRGBA* selCol10;
+
         switch (mode) {
             case MOVE:
                 textPrint("<Move Camera>", 0, 20, 100, TopLeft, &COLOR_TEXT, 1.2);
@@ -342,65 +423,78 @@ void DrawUpdate() {
             case TINT:
                 textPrint("<Screen Tint>", 0, 20, 100, TopLeft, &COLOR_TEXT, 1.2);
 
-                XRGBA* allCol = colorOption == 0 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
-                XRGBA* redCol = colorOption == 1 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
-                XRGBA* greCol = colorOption == 2 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
-                XRGBA* bluCol = colorOption == 3 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol1 = colorOption == 0 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol2 = colorOption == 1 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol3 = colorOption == 2 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol4 = colorOption == 3 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol5 = colorOption == 4 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
 
-                textPrint( "All", 0, 20, 130, TopLeft, allCol, 1.0);
-                textPrintF(20, 145, TopLeft, redCol, 1.0, "Red:   %.3f", Display_TintRed);
-                textPrintF(20, 160, TopLeft, greCol, 1.0, "Green: %.3f", Display_TintGreen);
-                textPrintF(20, 175, TopLeft, bluCol, 1.0, "Blue:  %.3f", Display_TintBlue);
+                textPrint( "Color", 0, 20, 130, TopLeft, selCol1, 1.0);
+                textPrintF(20, 145, TopLeft, selCol2, 1.0, "  R: %.2f", Display_TintRed);
+                textPrintF(20, 160, TopLeft, selCol3, 1.0, "  G: %.2f", Display_TintGreen);
+                textPrintF(20, 175, TopLeft, selCol4, 1.0, "  B: %.2f", Display_TintBlue);
+                textPrintF(20, 190, TopLeft, selCol5, 1.0, "Bloom Strength: %d", Display_BloomIntensity);
 
-                break;
-            case BRIGHT:
-                textPrint("<Brightness>", 0, 20, 100, TopLeft, &COLOR_TEXT, 1.2);
-
-                XRGBA* contrastCol = brightOption == 0 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
-                XRGBA* bloomCol    = brightOption == 1 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
-
-                textPrintF(20, 130, TopLeft, contrastCol, 1.0, "Contrast: %.3fx", GC_Contrast);
-                textPrintF(20, 145, TopLeft, bloomCol, 1.0, "Bloom Strength:  %d", Display_BloomIntensity);
-
-                if (brightOption == 1) {
+                if (colorOption == 4) {
                     displayIncrementControls = true;
-                }
-
-                if (brightOption == 0) {
-                    textPrint("! Negative/high values cause strange results",
-                    0, 20, 180, TopLeft, &COLOR_LIGHT_RED, 1.0);
                 }
 
                 break;
             case FOG:
                 textPrint("<Fog>", 0, 20, 100, TopLeft, &COLOR_TEXT, 1.2);
 
-                XRGBA* nearCol = fogOption == 0 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
-                XRGBA* farCol  = fogOption == 1 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol1  = fogOption == 0 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol2  = fogOption == 1 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol3  = fogOption == 2 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol4  = fogOption == 3 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol5  = fogOption == 4 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol6  = fogOption == 5 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol7  = fogOption == 6 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol8  = fogOption == 7 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol9  = fogOption == 8 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol10 = fogOption == 9 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
 
-                textPrintF(20, 130, TopLeft, nearCol, 1.0, "Near: %.3f", GC_Fog_Near_Scale);
-                textPrintF(20, 145, TopLeft, farCol, 1.0, "Far:  %.3f", GC_Fog_Far_Scale);
+                textSmpPrint("Global:", 0, 20, 130);
+                textPrintF(20, 145, TopLeft, selCol1, 1.0, "  Near Scale: %.2f", GC_Fog_Near_Scale);
+                textPrintF(20, 160, TopLeft, selCol2, 1.0, "  Far Scale:  %.2f", GC_Fog_Far_Scale);
 
-                break;
-            case POSITION:
-                textPrint("<Player Position>", 0, 20, 100, TopLeft, &COLOR_TEXT, 1.2);
+                DrawRender* fogInfo = getZoneFogInfo();
+                if (fogInfo == NULL) {
+                    if (fogOption > 1) { fogOption = 0; }
+                    break;
+                }
 
-                XRGBA* posCol = positionOption == 0 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
-                XRGBA* rotCol = positionOption == 1 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                textSmpPrint("Zone:", 0, 20, 175);
 
-                textPrint("Position", 0, 20, 130, TopLeft, posCol, 1.0);
-                textPrint("Rotation", 0, 20, 145, TopLeft, rotCol, 1.0);
+                textPrintF(20, 190, TopLeft, selCol3, 1.0, "  Enabled: %s", fogInfo->FogEnabled ? "Yes" : "No");
+
+                textPrintF(20, 205, TopLeft, selCol4, 1.0, "  Near: %.2f", fogInfo->FogNear);
+                textPrintF(20, 220, TopLeft, selCol5, 1.0, "  Far: %.2f", fogInfo->FogFar);
+                textPrintF(20, 235, TopLeft, selCol6, 1.0, "  Min: %.2f", fogInfo->FogMin);
+                textPrintF(20, 250, TopLeft, selCol7, 1.0, "  Max: %.2f", fogInfo->FogMax);
+
+                textPrintF(20, 265, TopLeft, selCol8, 1.0, "  Color R:  %d", fogInfo->FogColor.r);
+                textPrintF(20, 280, TopLeft, selCol9, 1.0, "  Color G:  %d", fogInfo->FogColor.g);
+                textPrintF(20, 295, TopLeft, selCol10, 1.0, "  Color B:  %d", fogInfo->FogColor.b);
+
+                if (fogOption > 6) {
+                    displayIncrementControls = true;
+                }
+
+                if (((fogOption >= 0) && (fogOption <= 1)) || ((fogOption >= 3) && (fogOption <= 6))) {
+                    textPrint("[Y] Faster    [X] Slower", 0, 20, 320, TopLeft, &COLOR_LIGHT_GREEN, 1.0);
+                }
 
                 break;
             case MISC:
                 textPrint("<Misc.>", 0, 20, 100, TopLeft, &COLOR_TEXT, 1.2);
 
-                XRGBA* speedCol  = miscOption == 0 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
-                XRGBA* wideCol   = miscOption == 1 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
-                XRGBA* frameCol  = miscOption == 2 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
-                XRGBA* shadowCol = miscOption == 3 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
-                XRGBA* skinCol   = miscOption == 4 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
-                XRGBA* lightCol  = miscOption == 5 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol1 = miscOption == 0 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol2 = miscOption == 1 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol3 = miscOption == 2 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol4 = miscOption == 3 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol5 = miscOption == 4 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol6 = miscOption == 5 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
 
                 char* skinText;
                 uint skinHash = getPlayerSkinHash();
@@ -419,13 +513,26 @@ void DrawUpdate() {
                         skinText = "N/A";
                         break;
                 }
+                
+                char* animTimeStr;
 
-                textPrintF(20, 130, TopLeft, speedCol, 1.0, "Game Speed: %.2f%%", getSpeedScale()*100.0);
-                textPrint("Toggle Widescreen (X/Y)", 0, 20, 145, TopLeft, wideCol, 1.0);
-                textPrint("Advance Player 1 Frame (X/Y)", 0, 20, 160, TopLeft, frameCol, 1.0);
-                textPrintF(20, 175, TopLeft, shadowCol, 1.0, "Shadow Precision: %.2fx", GC_Shadow_Precision_Scale);
-                textPrintF(20, 190, TopLeft, skinCol, 1.0, "Spyro Model: %s", skinText);
-                textPrintF(20, 205, TopLeft, lightCol, 1.0, "Update Lighting: %s", doLightingUpdate ? "Yes" : "No");
+                int* anim = getItemAnimator(gpPlayerItem);
+                if (anim == NULL) {
+                    animTimeStr = "N/A";
+                } else {
+                    float currTime = Animator_GetObjectTime(anim);
+
+                    char c[10];
+                    ig_sprintf(c, "%.2f", currTime);
+                    animTimeStr = c;
+                }
+
+                textPrintF(20, 130, TopLeft, selCol1, 1.0, "Game Speed: %.2f%%", getSpeedScale()*100.0);
+                textPrint("Toggle Widescreen", 0, 20, 145, TopLeft, selCol2, 1.0);
+                textPrintF(20, 160, TopLeft, selCol3, 1.0, "Player Animation Time: %s", animTimeStr);
+                textPrintF(20, 175, TopLeft, selCol4, 1.0, "Shadow Precision: %.2fx", GC_Shadow_Precision_Scale);
+                textPrintF(20, 190, TopLeft, selCol5, 1.0, "Spyro Model: %s", skinText);
+                textPrintF(20, 205, TopLeft, selCol6, 1.0, "Update Lighting: %s", doLightingUpdate ? "Yes" : "No");
 
                 if (miscOption == 0) {
                     displayIncrementControls = true;
@@ -437,12 +544,48 @@ void DrawUpdate() {
                 }
 
                 break;
+            case ITEM:
+                textPrint("<Position Objects>", 0, 20, 100, TopLeft, &COLOR_TEXT, 1.2);
+                
+                if (selectedItem == NULL) { return; }
+
+                selCol1 = positionOption == 0 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol2 = positionOption == 1 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol3 = positionOption == 2 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+                selCol4 = positionOption == 3 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
+
+                char* itemName = ItemHandler_GetName(*((int*) (((char*)selectedItem) + 0x14C)));
+
+                textPrintF(20, 130, TopLeft, selCol1, 1.0, "Selected Item: %s", itemName);
+                textPrintF(20, 145, TopLeft, selCol2, 1.0, "Move Camera: %s", doCameraFollow ? "Yes" : "No");
+                textPrint("Position", 0, 20, 160, TopLeft, selCol3, 1.0);
+                textPrint("Rotation", 0, 20, 175, TopLeft, selCol4, 1.0);
+
+                //DEBUG:
+                //int* animator = getItemAnimator(selectedItem);
+                //textPrintF(20, 205, TopLeft, selCol1, 1.0, "%x", animator);
+
+                if (positionOption == 2) {
+                    textPrint("Position Controls:\n[LStick] Move Hor.   [L/R] Move Ver.\n"
+                "[Y] Faster   [X] Slower", 0, 20, 300, TopLeft, &COLOR_LIGHT_GREEN, 1.0);
+                }
+                if (positionOption == 3) {
+                    textPrint("Rotation Controls:\n[LStick] Turn/Pitch   [L/R] Roll\n"
+                "[Y] Faster   [X] Slower", 0, 20, 300, TopLeft, &COLOR_LIGHT_GREEN, 1.0);
+                }
+
+                if (selectedItem != NULL) {
+                    EXVector* itemPos = getItemPosition((int*)selectedItem);
+                    drawItemMarker(itemPos);
+                }
+
+                break;
             default:
                 break;
         }
 
         if (displayIncrementControls) {
-            textPrint("[X/Y] Incremental", 0, 20, 280, TopLeft, &COLOR_LIGHT_GREEN, 1.0);
+            textPrint("[X/Y] Incremental", 0, 20, 320, TopLeft, &COLOR_LIGHT_GREEN, 1.0);
         }
 
         textPrint("General Controls:\n[B] Reset Param   [Dpad] Browse   [L/R] Change Value\n"
@@ -458,6 +601,25 @@ void DrawUpdate() {
         textSmpPrint("Dpad down: Restart Anim", 0, 20, 170);
         textSmpPrintF(20, 190, "R: Turn Headtracking %s", headTrackEnabled() ? "Off" : "On");
     }
+
+    /*
+    DrawRender* fogInfo = getZoneFogInfo();
+    textSmpPrintF(20, 100, "Near: %.2f", fogInfo->FogNear);
+    textSmpPrintF(20, 115, "Far: %.2f", fogInfo->FogFar);
+    textSmpPrintF(20, 130, "Min: %.2f", fogInfo->FogMin);
+    textSmpPrintF(20, 145, "Max: %.2f", fogInfo->FogMax);
+    textSmpPrintF(20, 160, "Color: %x%x%x%x",
+        fogInfo->FogColor.r,
+        fogInfo->FogColor.g,
+        fogInfo->FogColor.b,
+        fogInfo->FogColor.a
+    );
+    textSmpPrintF(20, 175, "Enabled: %s", fogInfo->FogEnabled ? "True" : "False");
+
+    if (isButtonPressed(Button_Z, g_PadNum)) {
+        ig_printf("%x\n", fogInfo);
+    }
+    */
 
     return;
 }
@@ -485,31 +647,16 @@ int GUI_ScreenItem_Hook(int* screenItem, int* wnd) {
     return GUI_ScreenItem_Draw(screenItem, wnd);
 }
 
-//Hooks into the general item update function
-void XItem_DoItemUpdate_Hook(int* self)
-{
-    //Check if we're updating the player item and if we should advance this frame
-    if ((self == gpPlayerItem) && doFrameAdvance) {
-        doFrameAdvance = false;
-        PlayAnimators_Pause = 1; //Make animators play while paused
-        g_PadNum = 3; //Hack so controls don't interfere
-
-        //Store player's current position
-        EXVector* pos = (EXVector*) (self + (0xD0/4));
-        EXVector store = {pos->x, pos->y, pos->z, pos->w};
-
-        XItem_DoItemUpdate(self);
-
-        //Restore position
-        pos->x = store.x;
-        pos->y = store.y;
-        pos->z = store.z;
-        pos->w = store.w;
-
-        //Restore these variables
-        PlayAnimators_Pause = 0;
-        g_PadNum = 0;
-    } else {
-        XItem_DoItemUpdate(self);
+int GUI_Screen_Hook(int* screen, int* wnd) {
+    if (inPhotoMode && !gameHudIsOn) {
+        return 0;
     }
+    return GUI_Screen_Draw(screen, wnd);
+}
+
+void Animator_Anim_Bounds_Hook(int* animator, int* InBounds, int* Bounds, uint Flags) {
+    if (inPhotoMode) {
+        return;
+    }
+    Animator_ApplyMatrixBoundsBox(animator, InBounds, Bounds, Flags);
 }
