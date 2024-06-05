@@ -68,6 +68,7 @@ void saveCamHandlerVecs() {
     savedCamHandlerLook.y = camLook->y;
     savedCamHandlerLook.z = camLook->z;
     savedCamHandlerLook.w = camLook->w;
+    savedFOV = gCommonCamera.VFov;
 }
 
 void saveFogInfo() {
@@ -138,6 +139,7 @@ void restoreCamHandlerVecs() {
     camLook->y = savedCamHandlerLook.y;
     camLook->z = savedCamHandlerLook.z;
     camLook->w = savedCamHandlerLook.w;
+    gCommonCamera.VFov = savedFOV;
 }
 
 uint getPlayerSkinHash() {
@@ -312,7 +314,7 @@ void MainUpdate() {
             restoreCamHandlerVecs();
             selectedItem = NULL;
             updatePauseState();
-            gCommonCamera.VFov = 1.05;
+            gCommonCamera.VFov = savedFOV;
             updateCameraViewport();
 
             PlaySFX(HT_Sound_SFX_GEN_HUD_NPC_SELECT);
@@ -388,7 +390,9 @@ void MainUpdate() {
                 break;
         }
     } else if(playerInScanMode()) {
-        doScanmodeControls();
+        if (!gamePaused) {
+            doScanmodeControls();
+        }
     }
     
     return;
@@ -592,14 +596,14 @@ void DrawUpdate() {
                   "[Start] Reset All   [A] Toggle HUD   [Z] Exit", 0, 20, 380, TopLeft, &COLOR_LIGHT_GREEN, 1.0);
     }
 
-    if (!inPhotoMode && playerInScanMode()) {
+    if (!inPhotoMode && playerInScanMode() && !gamePaused) {
         if (gpPlayer == NULL) { return; }
         uint animMode = getCurrentAnimMode();
 
         textSmpPrintF(20, 130, "Current AnimMode: %d", animMode & 0xFFFF);
-        textSmpPrint("Dpad left/right: Change", 0, 20, 150);
-        textSmpPrint("Dpad down: Restart Anim", 0, 20, 170);
-        textSmpPrintF(20, 190, "R: Turn Headtracking %s", headTrackEnabled() ? "Off" : "On");
+        textSmpPrint("[Dpad left/right]: Change", 0, 20, 150);
+        textSmpPrint("[Dpad up]: Restart Anim", 0, 20, 170);
+        textSmpPrintF(20, 190, "[R]: Toggle Head Tracking: %s", headTrackEnabled() ? "On" : "Off");
     }
 
     /*

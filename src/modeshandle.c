@@ -23,6 +23,7 @@ int* customCam = NULL;
 
 EXVector savedCamHandlerPos  = {0};
 EXVector savedCamHandlerLook = {0};
+float savedFOV = 1.05;
 
 EXVector savedPlayerRot = {0};
 EXVector savedPlayerPos = {0};
@@ -191,6 +192,12 @@ bool playerInScanMode() {
     return *((bool*) (gpPlayer + (0x588/4)));
 }
 
+//check for animmodes that crash the game when played
+bool animModeIsBroken(uint hash) {
+    return
+        (hash == HT_AnimMode_BowShield);
+}
+
 int* getZoneInfo() {
     if (gpPlayerItem == NULL) {
         return NULL;
@@ -268,6 +275,11 @@ void doScanmodeControls() {
                 newMode = HT_AnimMode_HASHCODE_BASE+1;
             }
 
+            //Skip over broken animmode
+            if (animModeIsBroken(newMode)) {
+                newMode++;
+            }
+
             if (Player_ForceModeChange(gpPlayer, newMode)) {
                 break;
             }
@@ -283,6 +295,11 @@ void doScanmodeControls() {
                 newMode = HT_AnimMode_HASHCODE_END-1;
             }
 
+            //Skip over broken animmode
+            if (animModeIsBroken(newMode)) {
+                newMode--;
+            }
+
             if (Player_ForceModeChange(gpPlayer, newMode)) {
                 break;
             }
@@ -291,7 +308,7 @@ void doScanmodeControls() {
         PlaySFX(HT_Sound_SFX_GEN_HUD_NPC_CHOOSE);
     }
 
-    if (isButtonPressed(Button_Dpad_Down, g_PadNum)) {
+    if (isButtonPressed(Button_Dpad_Up, g_PadNum)) {
         Player_ForceModeChange(gpPlayer, currmode);
 
         PlaySFX(HT_Sound_SFX_GEN_HUD_NPC_CHOOSE);
@@ -343,7 +360,9 @@ void doCamControls() {
     if (gCommonCamera.VFov < 0.05) { gCommonCamera.VFov = 0.05; }
 
     if (isButtonPressed(Button_B, g_PadNum)) {
-        gCommonCamera.VFov = 1.05;
+        EXVector_Copy(&gCommonCamera.Position, &savedCamHandlerPos);
+        EXVector_Copy(&gCommonCamera.Target, &savedCamHandlerLook);
+        gCommonCamera.VFov = savedFOV;
     }
 
     //Move camera

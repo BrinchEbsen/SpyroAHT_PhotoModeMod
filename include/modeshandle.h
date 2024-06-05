@@ -17,6 +17,7 @@ extern int* customCam;
 
 extern EXVector savedCamHandlerPos;
 extern EXVector savedCamHandlerLook;
+extern float savedFOV;
 
 bool headTrackEnabled();
 void setHeadTracking(bool enable);
