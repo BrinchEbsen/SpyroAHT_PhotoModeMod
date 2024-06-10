@@ -583,10 +583,10 @@ void DrawUpdate() {
                 textPrint("Rotation", 0, 20, 175, TopLeft, selCol4, 1.0);
 
                 //DEBUG:
-                int* animator = getItemAnimator(selectedItem);
-                textPrintF(20, 205, TopLeft, selCol1, 1.0, "%x", animator);
-                int* vtable = (int*) *(animator + (0x18/4));
-                textPrintF(20, 225, TopLeft, selCol1, 1.0, "%x", vtable);
+                //int* animator = getItemAnimator(selectedItem);
+                //textPrintF(20, 205, TopLeft, selCol1, 1.0, "%x", animator);
+                //int* vtable = (int*) *(animator + (0x18/4));
+                //textPrintF(20, 225, TopLeft, selCol1, 1.0, "%x", vtable);
 
                 if (positionOption == 2) {
                     textPrint("Position Controls:\n[LStick] Move Hor.   [L/R] Move Ver.\n"
