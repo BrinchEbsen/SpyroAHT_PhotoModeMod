@@ -5,7 +5,6 @@ INPUT(../../../.config/symbols/auto_symbols.txt)
 MEMORY
 {
     /* RAM locations where we'll inject the code for our replacement functions */
-    MainCodecave : ORIGIN = 0x803D8FB0, LENGTH = 0x2010
     SharkCodeCave : ORIGIN = 0x801858c0, LENGTH = 0x1D60
     ViewerCodeCave : ORIGIN = 0x80296618, LENGTH = 0x7dcc
     MainUpdateHook : ORIGIN = 0x8026fa6c, LENGTH = 0x100000
@@ -68,19 +67,6 @@ SECTIONS
         animatoranim_bounds_hook.o(.bss)
     } > AnimatorAnimBoundsHook
 
-    .MainCodecave : 
-    {
-        main.o(.text)
-        main.o(.rodata)
-        main.o(.rodata*)
-        main.o(.data)
-        main.o(.bss)
-        main.o(.sdata)
-        main.o(.sbss)
-        main.o(.scommon)
-        main.o(.main.o.*)
-    } > MainCodecave
-
     .SharkCodeCave : 
     {
         buttons.o(.text)
@@ -132,6 +118,15 @@ SECTIONS
 
     .ViewerCodeCave : 
     {
+        main.o(.text)
+        main.o(.rodata)
+        main.o(.rodata*)
+        main.o(.data)
+        main.o(.bss)
+        main.o(.sdata)
+        main.o(.sbss)
+        main.o(.scommon)
+        main.o(.main.o.*)
         modeshandle.o(.text)
         modeshandle.o(.rodata)
         modeshandle.o(.rodata*)

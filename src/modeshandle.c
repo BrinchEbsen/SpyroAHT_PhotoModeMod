@@ -57,6 +57,12 @@ void updateCameraViewport() {
     gCommonCamera.Distance = gCommonCamera.Rect.h * 0.5 * (1.0 / ig_tanf(gCommonCamera.VFov * 0.5));
 }
 
+void resetCamPosition() {
+    EXVector_Copy(&gCommonCamera.Position, &savedCamHandlerPos);
+    EXVector_Copy(&gCommonCamera.Target, &savedCamHandlerLook);
+    gCommonCamera.VFov = savedFOV;
+}
+
 void updateLightingVector() {
     if (doLightingUpdate) {
         int* camHandler = *(gpGameWnd + 0x378/4);
@@ -167,6 +173,26 @@ void updateAnimatorMatrix(int* item, EXVector* pos, EXVector* rot) {
     mat->row3.x = pos->x;
     mat->row3.y = pos->y;
     mat->row3.z = pos->z;
+}
+
+bool itemHasValidAnimator(int* item) {
+    if (item == NULL) { return false; }
+
+    int* anim = getItemAnimator(item);
+    if (anim == NULL) { return false; }
+
+    int* vtable = (int*) (*(anim + (0x18/4)));
+
+    //Check if the vtable matches that of an animator we can move
+    if (
+           (vtable == 0x804483d0) //EXItemAnimator_AnimModifier
+        || (vtable == 0x804484f0) //EXItemAnimator_Entity
+        || (vtable == 0x80448358) //EXItemAnimator_Anim
+    ) {
+        return true;
+    }
+
+    return false;
 }
 
 EXVector* getItemPosition(int* item) {
@@ -360,9 +386,7 @@ void doCamControls() {
     if (gCommonCamera.VFov < 0.05) { gCommonCamera.VFov = 0.05; }
 
     if (isButtonPressed(Button_B, g_PadNum)) {
-        EXVector_Copy(&gCommonCamera.Position, &savedCamHandlerPos);
-        EXVector_Copy(&gCommonCamera.Target, &savedCamHandlerLook);
-        gCommonCamera.VFov = savedFOV;
+        resetCamPosition();
     }
 
     //Move camera
@@ -879,15 +903,28 @@ void doMiscControls() {
             break;
         case 2:
             //Return if no input
-            if ( (rtrig == 0.0) && (ltrig == 0.0)) { return; }
+            if ( (rtrig == 0.0) && (ltrig == 0.0) && (!isButtonPressed(Button_B, g_PadNum)))
+            { return; }
+            
+            if (gpPlayerItem == NULL) { return; }
 
             int* anim = getItemAnimator(gpPlayerItem);
             float currTime = Animator_GetObjectTime(anim);
 
             float f = (1.0 / 60.0);
 
+            if (isButtonDown(Button_Y, g_PadNum)) {
+                f = (1.0 / 30.0);
+            } else if (isButtonDown(Button_X, g_PadNum)) {
+                f = (1.0 / 120.0);
+            }
+
             currTime += f * rtrig;
             currTime -= f * ltrig;
+
+            if (isButtonPressed(Button_B, g_PadNum)) {
+                currTime = 0.0;
+            }
 
             if (currTime < 0.0) { currTime = 0.0; }
 
@@ -915,6 +952,7 @@ void doMiscControls() {
 
             break;
         case 4:
+            if (gpPlayerItem == NULL) { return; }
             uint skinHash = getPlayerSkinHash();
 
             if ( (skinHash == HT_AnimSkin_Spyro) || (skinHash == HT_AnimSkin_Flame) || (skinHash == HT_AnimSkin_Amber)) {
@@ -965,7 +1003,70 @@ void nextItem() {
     }
 }
 
+bool findFirstValidAnimator() {
+    //Start from first item
+    if (ItemEnv_ItemList->head == NULL) {
+        selectedItem = ItemEnv_ItemList->head;
+    } else {
+        return false; //List is empty so there's nothing to find
+    }
+
+    while (selectedItem != NULL) {
+        if (itemHasValidAnimator(selectedItem)) {
+            return true; //we found one
+        }
+
+        selectedItem = selectedItem->next;
+    }
+
+    //None found, return
+    return false;
+}
+
+void findNextValidAnimator(bool backwards) {
+    //Check if no item is selected
+    if (selectedItem == NULL) {
+        return;
+    }
+
+    EXDListItem* startingItem = selectedItem;
+
+    if (backwards) {
+        prevItem();
+    } else {
+        nextItem();
+    }
+
+    //Loop through items until we find one with an animator, or we get back to the start
+    while(startingItem != selectedItem) {
+        if (itemHasValidAnimator(selectedItem)) {
+            break;
+        }
+
+        if (backwards) {
+            prevItem();
+        } else {
+            nextItem();
+        }
+    }
+
+    PlaySFX(HT_Sound_SFX_GEN_HUD_NPC_CHOOSE);
+}
+
 void doItemControls() {
+    //Find an item to select if it's null
+    if (selectedItem == NULL) {
+        //Prioritize selecting the player
+        if (gpPlayerItem != NULL) {
+            selectedItem = gpPlayerItem;
+        } else {
+            //Find first valid item, return if it failed
+            if (!findFirstValidAnimator()) {
+                return;
+            }
+        }
+    }
+
     if (isButtonPressed(Button_Dpad_Down, g_PadNum)) {
         positionOption++;
         if (positionOption > 3) { positionOption = 0; }
@@ -977,52 +1078,17 @@ void doItemControls() {
         PlaySFX(HT_Sound_SFX_GEN_HUD_CHANGE_BREATH);
     }
 
-    if (selectedItem == NULL) {
-        if (gpPlayerItem != NULL) {
-            selectedItem = gpPlayerItem;
-        } else if (ItemEnv_ItemList->head != NULL) {
-            selectedItem = ItemEnv_ItemList->head;
-        } else {
-            selectedItem = NULL;
-            return;
-        }
-    }
-
     switch (positionOption) {
     case 0:
         bool newItemSelected = false;
 
         if (isButtonPressed(Button_R, g_PadNum)) {
-            EXDListItem* startingItem = selectedItem;
-
-            nextItem();
-
-            //Loop through items until we find one with an animator, or we get back to the start
-            while(startingItem != selectedItem) {
-                if ( *((int*) (((char*)selectedItem) + 0x144)) != NULL ) {
-                    break;
-                }
-                nextItem();
-            }
-
-            PlaySFX(HT_Sound_SFX_GEN_HUD_NPC_CHOOSE);
+            findNextValidAnimator(false);
 
             newItemSelected = true;
         }
         if (isButtonPressed(Button_L, g_PadNum)) {
-            EXDListItem* startingItem = selectedItem;
-
-            prevItem();
-
-            //Loop through items until we find one with an animator, or we get back to the start
-            while(startingItem != selectedItem) {
-                if ( *((int*) (((char*)selectedItem) + 0x144)) != NULL ) {
-                    break;
-                }
-                prevItem();
-            }
-
-            PlaySFX(HT_Sound_SFX_GEN_HUD_NPC_CHOOSE);
+            findNextValidAnimator(true);
 
             newItemSelected = true;
         }

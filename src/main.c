@@ -40,6 +40,8 @@ bool gameHudIsOn = true;
 //Current selected mode in the photo mode
 int mode = MOVE;
 
+int toggleInfoTextTimer = 0;
+
 DrawRender storedFogInfo = {0};
 
 //Stuff to do on startup
@@ -143,9 +145,9 @@ void restoreCamHandlerVecs() {
 }
 
 uint getPlayerSkinHash() {
-    int* animator = *(gpPlayerItem + (0x144/4));
-    if (animator == 0) { return 0; }
-    int* skinAnim = *(animator + (0x110/4));
+    if (gpPlayerItem == NULL) { return NULL; }
+    int* anim = getItemAnimator(gpPlayerItem);
+    int* skinAnim = *(anim + (0x110/4));
     if (skinAnim == 0) { return 0; }
 
     return *(skinAnim + (0xD0/4));
@@ -172,7 +174,7 @@ void resetValues() {
     Display_TintGreen = 1.0;
     Display_TintBlue = 1.0;
 
-    GC_Contrast = 1.11000001;
+    //GC_Contrast = 1.11000001;
     Display_BloomIntensity = 0x40;
 
     GC_Fog_Near_Scale = 1.0;
@@ -182,6 +184,7 @@ void resetValues() {
     GC_Shadow_Precision_Scale = 2.0;
 
     restoreFogInfo();
+    resetCamPosition();
 }
 
 bool checkZDoublePress() {
@@ -291,22 +294,29 @@ void MainUpdate() {
     //Check pause
     updatePauseState();
 
+    if (toggleInfoTextTimer > 0) {
+        toggleInfoTextTimer--;
+    }
+
+    if (isButtonPressed(Button_Z, g_PadNum)) {
+        toggleInfoTextTimer = 120;
+    }
+
     //Toggle photomode on and off
     bool toggle;
 
-    if (inPhotoMode) { //If in photomode already, just check for the Z button
-        toggle = isButtonPressed(Button_Z, g_PadNum);
-    } else { //Else require a double-press, or dpad-down at the same time
-        if (checkZDoublePress()) {
-            toggle = true;
-        } else if(isButtonPressed(Button_Z, g_PadNum) && isButtonDown(Button_Dpad_Down, g_PadNum)) {
-            toggle = true;
-        } else {
-            toggle = false;
-        }
+    //Require a double-press, or dpad-down at the same time
+    if (checkZDoublePress()) {
+        toggle = true;
+    } else if(isButtonPressed(Button_Z, g_PadNum) && isButtonDown(Button_Dpad_Down, g_PadNum)) {
+        toggle = true;
+    } else {
+        toggle = false;
     }
 
     if (toggle) {
+        toggleInfoTextTimer = 0;
+
         if (inPhotoMode) {
             inPhotoMode = false;
             gameHudIsOn = true;
@@ -547,11 +557,18 @@ void DrawUpdate() {
                     0, 20, 230, TopLeft, &COLOR_LIGHT_RED, 1.0);
                 }
 
+                if (miscOption == 2) {
+                    textPrint("[Y] Faster    [X] Slower", 0, 20, 320, TopLeft, &COLOR_LIGHT_GREEN, 1.0);
+                }
+
                 break;
             case ITEM:
                 textPrint("<Position Objects>", 0, 20, 100, TopLeft, &COLOR_TEXT, 1.2);
                 
-                if (selectedItem == NULL) { return; }
+                if (selectedItem == NULL) {
+                    textPrint("No moveable items loaded", 0, 20, 130, TopLeft, &COLOR_LIGHT_RED, 1.0);
+                    return;
+                }
 
                 selCol1 = positionOption == 0 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
                 selCol2 = positionOption == 1 ? &COLOR_LIGHT_BLUE : &COLOR_TEXT;
@@ -566,8 +583,10 @@ void DrawUpdate() {
                 textPrint("Rotation", 0, 20, 175, TopLeft, selCol4, 1.0);
 
                 //DEBUG:
-                //int* animator = getItemAnimator(selectedItem);
-                //textPrintF(20, 205, TopLeft, selCol1, 1.0, "%x", animator);
+                int* animator = getItemAnimator(selectedItem);
+                textPrintF(20, 205, TopLeft, selCol1, 1.0, "%x", animator);
+                int* vtable = (int*) *(animator + (0x18/4));
+                textPrintF(20, 225, TopLeft, selCol1, 1.0, "%x", vtable);
 
                 if (positionOption == 2) {
                     textPrint("Position Controls:\n[LStick] Move Hor.   [L/R] Move Ver.\n"
@@ -579,8 +598,7 @@ void DrawUpdate() {
                 }
 
                 if (selectedItem != NULL) {
-                    EXVector* itemPos = getItemPosition((int*)selectedItem);
-                    drawItemMarker(itemPos);
+                    drawItemMarker(&selectedItemPos);
                 }
 
                 break;
@@ -601,9 +619,26 @@ void DrawUpdate() {
         uint animMode = getCurrentAnimMode();
 
         textSmpPrintF(20, 130, "Current AnimMode: %d", animMode & 0xFFFF);
-        textSmpPrint("[Dpad left/right]: Change", 0, 20, 150);
-        textSmpPrint("[Dpad up]: Restart Anim", 0, 20, 170);
+        textSmpPrint("[Dpad Left/Right]: Change", 0, 20, 150);
+        textSmpPrint("[Dpad Up]: Restart Anim", 0, 20, 170);
         textSmpPrintF(20, 190, "[R]: Toggle Head Tracking: %s", headTrackEnabled() ? "On" : "Off");
+        textSmpPrint("[Z+Dpad Up]: Exit", 0, 20, 210);
+    }
+
+    //Tutorial text
+    if (toggleInfoTextTimer > 0) {
+        if (inPhotoMode) {
+            textPrint(
+                "Toggle Photo Mode:\nZ+Dpad Down / Double-Press Z",
+                0, 0, 170, TopRight, &COLOR_LIGHT_GREEN, 1.0
+            );
+        } else if(!playerInScanMode()) {
+            textPrint(
+                "Toggle Photo Mode:\nZ+Dpad Down / Double-Press Z\n"
+                "Toggle ScanMode:\nZ+Dpad Up",
+                0, 0, 170, TopRight, &COLOR_LIGHT_GREEN, 1.0
+            );
+        }
     }
 
     /*

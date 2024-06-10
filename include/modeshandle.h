@@ -23,6 +23,7 @@ bool headTrackEnabled();
 void setHeadTracking(bool enable);
 
 void updateCameraViewport();
+void resetCamPosition();
 
 EXVector* getItemPosition(int* item);
 EXVector* getItemRotation(int* item);
